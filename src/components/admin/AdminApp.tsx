@@ -4,8 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { SETTING_LABELS } from "@/lib/defaults";
 
-type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
-
+type Row = Record<string, any>;
 async function api(method: string, resource: string, body?: unknown, query = "") {
   const res = await fetch(`/api/admin/${resource}${query}`, {
     method,
@@ -219,7 +218,7 @@ function Table({ head, children, empty }: { head: string[]; children: React.Reac
 }
 
 function Badge({ s }: { s: string }) {
-  const cls = s === "paid" ? "bg-[#203D32] text-white" : s === "demo_paid" ? "bg-[#F1E5A8] text-[#2B2410] border border-dashed border-[#2B2410]" : s === "pending" ? "bg-[#F2BFA5]" : s.includes("failed") ? "bg-[#ED705D] text-[#1B0A0A]" : "bg-black/10";
+  const cls = s === "paid" ? "bg-[#203D32] text-white" : s === "demo_paid" ? "bg-[#F1E5A8] text-[#2B2410] border border-dashed border-[#2B2410]" : s === "pending" ? "bg-[#F2BFA5]" : s === "refunded" ? "bg-[#D9CBE8] text-[#26163D] border border-[#26163D]/30" : s.includes("failed") ? "bg-[#ED705D] text-[#1B0A0A]" : "bg-black/10";
   const label = s === "demo_paid" ? "DEMO paid" : s === "demo_failed" ? "DEMO failed" : s;
   return <span className={`inline-block px-2 py-0.5 text-xs font-semibold uppercase ${cls}`}>{label}</span>;
 }

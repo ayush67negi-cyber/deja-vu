@@ -1,14 +1,3 @@
-export const COLORS = {
-  burgundy: "#581C32",
-  cream: "#F4EBDD",
-  lavender: "#D9CBE8",
-  peach: "#F2BFA5",
-  forest: "#203D32",
-  butter: "#F1E5A8",
-  coral: "#ED705D",
-  ink: "#171717",
-};
-
 export const DEFAULT_SETTINGS: Record<string, string> = {
   hero_body:
     "Join a curated table, share a meal and discover conversations you didn't know you needed.",

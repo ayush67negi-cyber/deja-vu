@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   integer,
@@ -6,6 +7,8 @@ import {
   serial,
   text,
   timestamp,
+  index,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -55,7 +58,7 @@ export const testimonials = pgTable("testimonials", {
 
 export const members = pgTable("members", {
   id: serial("id").primaryKey(),
-  token: uuid("token").notNull().defaultRandom(),
+  token: uuid("token").notNull().unique().defaultRandom(),
   fullName: text("full_name").notNull(),
   email: text("email").notNull(),
   phone: text("phone").notNull(),
@@ -70,24 +73,28 @@ export const members = pgTable("members", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const payments = pgTable("payments", {
-  id: serial("id").primaryKey(),
-  ref: uuid("ref").notNull().defaultRandom(),
-  memberId: integer("member_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  planId: integer("plan_id").references(() => plans.id, { onDelete: "set null" }),
-  planName: text("plan_name").notNull(),
-  amountInr: integer("amount_inr").notNull(),
-  // pending | paid | failed | demo_paid | demo_failed
-  status: text("status").notNull().default("pending"),
-  mode: text("mode").notNull().default("demo"),
-  razorpayOrderId: text("razorpay_order_id"),
-  razorpayPaymentId: text("razorpay_payment_id"),
-  failureReason: text("failure_reason"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+export const payments = pgTable(
+  "payments",
+  {
+    id: serial("id").primaryKey(),
+    ref: uuid("ref").notNull().unique().defaultRandom(),
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    planId: integer("plan_id").references(() => plans.id, { onDelete: "set null" }),
+    planName: text("plan_name").notNull(),
+    amountInr: integer("amount_inr").notNull(),
+    // pending | paid | failed | demo_paid | demo_failed | refunded
+    status: text("status").notNull().default("pending"),
+    mode: text("mode").notNull().default("demo"),
+    razorpayOrderId: text("razorpay_order_id"),
+    razorpayPaymentId: text("razorpay_payment_id"),
+    failureReason: text("failure_reason"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [index("payments_razorpay_order_id_idx").on(t.razorpayOrderId)],
+);
 
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
@@ -101,15 +108,25 @@ export const events = pgTable("events", {
   notes: text("notes").notNull().default(""),
 });
 
-export const bookings = pgTable("bookings", {
-  id: serial("id").primaryKey(),
-  eventId: integer("event_id")
-    .notNull()
-    .references(() => events.id, { onDelete: "cascade" }),
-  memberId: integer("member_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  // booked | attended | no_show | cancelled
-  status: text("status").notNull().default("booked"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const bookings = pgTable(
+  "bookings",
+  {
+    id: serial("id").primaryKey(),
+    eventId: integer("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    memberId: integer("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    // booked | attended | no_show | cancelled
+    status: text("status").notNull().default("booked"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    // A member may hold at most one live (non-cancelled) booking per
+    // experience. Re-booking after a cancellation stays possible.
+    uniqueIndex("bookings_event_member_active_unique")
+      .on(t.eventId, t.memberId)
+      .where(sql`status <> 'cancelled'`),
+  ],
+);
