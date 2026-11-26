@@ -13,6 +13,7 @@ import {
   testimonials,
 } from "@/db/schema";
 import { isAdmin } from "@/lib/admin-auth";
+import { checkBookingConstraint } from "@/lib/bookings";
 import { ensureSeed, getSettings } from "@/lib/data";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
 
@@ -57,7 +58,7 @@ const CRUD: Record<string, Crud> = {
   },
 };
 
-const PAYMENT_STATUSES = ["pending", "paid", "failed", "demo_paid", "demo_failed"];
+const PAYMENT_STATUSES = ["pending", "paid", "failed", "demo_paid", "demo_failed", "refunded"];
 const BOOKING_STATUSES = ["booked", "attended", "no_show", "cancelled"];
 
 function sanitize(body: Record<string, unknown>, fields: Record<string, FieldKind>, partial: boolean) {
@@ -186,8 +187,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ resource: stri
     for (const r of crud.required) {
       if (values[r] === undefined || values[r] === "") return Response.json({ error: `${r} is required` }, { status: 422 });
     }
-    if (resource === "bookings" && !BOOKING_STATUSES.includes(String(values.status ?? "booked"))) {
-      return Response.json({ error: "Invalid status" }, { status: 422 });
+    if (resource === "bookings") {
+      const status = String(values.status ?? "booked");
+      if (!BOOKING_STATUSES.includes(status)) {
+        return Response.json({ error: "Invalid status" }, { status: 422 });
+      }
+      if (status !== "cancelled") {
+        const result = await checkBookingConstraint(db, Number(values.eventId), Number(values.memberId));
+        if (!result.ok) return Response.json({ error: result.error }, { status: result.status });
+      }
     }
     const [row] = await db.insert(crud.table).values(values as never).returning();
     return Response.json({ data: row });
@@ -222,8 +230,19 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ resource: str
     const crud = CRUD[resource];
     if (!crud) return Response.json({ error: "Unknown resource" }, { status: 404 });
     const values = sanitize(body, crud.fields, true);
-    if (resource === "bookings" && values.status && !BOOKING_STATUSES.includes(String(values.status))) {
-      return Response.json({ error: "Invalid status" }, { status: 422 });
+    if (resource === "bookings") {
+      if (values.status && !BOOKING_STATUSES.includes(String(values.status))) {
+        return Response.json({ error: "Invalid status" }, { status: 422 });
+      }
+      const [cur] = await db.select().from(bookings).where(eq(bookings.id, id));
+      if (!cur) return Response.json({ error: "Booking not found" }, { status: 404 });
+      const nextStatus = String(values.status ?? cur.status);
+      if (nextStatus !== "cancelled") {
+        const nextEventId = Number(values.eventId ?? cur.eventId);
+        const nextMemberId = Number(values.memberId ?? cur.memberId);
+        const result = await checkBookingConstraint(db, nextEventId, nextMemberId, { excludeBookingId: id });
+        if (!result.ok) return Response.json({ error: result.error }, { status: result.status });
+      }
     }
     if (Object.keys(values).length === 0) return Response.json({ error: "Nothing to update" }, { status: 422 });
     await db.update(crud.table).set(values as never).where(eq(crud.table.id as never, id as never));
@@ -241,6 +260,19 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ resource: st
   if (!Number.isInteger(id)) return Response.json({ error: "id required" }, { status: 422 });
   try {
     if (resource === "members") {
+      // Deleting a member must never silently erase the payment audit trail
+      // (members -> payments is ON DELETE CASCADE). Refuse when any payment
+      // exists; the team can anonymize the member instead of deleting them.
+      const [hasPayments] = await db
+        .select({ c: sql<number>`count(*)::int` })
+        .from(payments)
+        .where(eq(payments.memberId, id));
+      if ((hasPayments?.c ?? 0) > 0) {
+        return Response.json(
+          { error: "This member has payment history and can't be deleted. Remove their contact details manually if erasure is required." },
+          { status: 409 },
+        );
+      }
       await db.delete(members).where(eq(members.id, id));
     } else if (resource === "payments") {
       await db.delete(payments).where(eq(payments.id, id));

@@ -77,7 +77,6 @@ export default function JoinFlow(props: Props) {
 
   function validate(s: number) {
     const fields = STEP_FIELDS[s];
-    const shape = schema.shape as Record<string, unknown>;
     const pick = Object.fromEntries(fields.map((f) => [f, true])) as Record<string, true>;
     const sub = schema.pick(pick as never);
     const res = sub.safeParse(v);
@@ -86,7 +85,6 @@ export default function JoinFlow(props: Props) {
     if (s === 1 && v.categorySlug === "her" && v.gender && v.gender !== "Woman" && !errs.categorySlug) {
       errs.categorySlug = "Her Table is a women-only experience. Choose another table, or update your gender in step 1.";
     }
-    void shape;
     setErrors(errs);
     if (Object.keys(errs).length) {
       const first = fields.find((f) => errs[f]);
@@ -366,7 +364,7 @@ export default function JoinFlow(props: Props) {
                   <fieldset aria-describedby="e-availability">
                     <legend className="eyebrow mb-4 text-[0.7rem]">Which Sundays could you make?</legend>
                     <div className="grid gap-3 sm:grid-cols-2" id="f-availability" tabIndex={-1}>
-                      {sundays.slice(0, 4).map((s) => (
+                      {sundays.map((s) => (
                         <label key={s.value} className={`flex cursor-pointer items-center gap-3 border-[1.5px] p-4 transition-colors focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#A8352A] ${v.availability.includes(s.value) ? "border-[#581C32] bg-[#581C32] text-[#F7EBDD]" : "border-[#2A1220]/30 hover:border-[#2A1220]"}`}>
                           <input type="checkbox" className="sr-only" checked={v.availability.includes(s.value)} onChange={() => toggle("availability", s.value)} />
                           <span aria-hidden className="grid h-5 w-5 place-items-center border border-current text-xs">{v.availability.includes(s.value) ? "✓" : ""}</span>
