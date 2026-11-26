@@ -1,0 +1,140 @@
+@import "tailwindcss";
+@import "@fontsource-variable/fraunces/wght.css";
+@import "@fontsource-variable/fraunces/wght-italic.css";
+@import "@fontsource-variable/dm-sans";
+
+@theme inline {
+  --font-display: "Fraunces Variable", Georgia, serif;
+  --font-sans: "DM Sans Variable", system-ui, sans-serif;
+  --color-burgundy: #581c32;
+  --color-cream: #f4ebdd;
+  --color-lavender: #d9cbe8;
+  --color-peach: #f2bfa5;
+  --color-forest: #203d32;
+  --color-butter: #f1e5a8;
+  --color-coral: #ed705d;
+  --color-ink: #171717;
+}
+
+:root {
+  --bg: #581c32;
+  --fg: #f7ebdd;
+  --accent: #f2bfa5;
+  --line: color-mix(in srgb, var(--fg) 22%, transparent);
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+::selection { background: var(--accent); color: #171717; }
+
+/* Sections have a static fallback colour; once the scroll controller is live
+   they go transparent and the page background interpolates between them. */
+[data-live] section[data-bg] { background: transparent !important; color: var(--fg) !important; }
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 0.92;
+  font-variation-settings: "opsz" 144, "SOFT" 0;
+}
+.display em { font-style: italic; font-weight: 300; color: var(--accent); }
+
+.eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1rem 1.7rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.3s, color 0.3s, box-shadow 0.3s;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover { transform: translateY(-3px); }
+.btn:focus-visible, a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.btn-solid { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.btn-solid:hover { background: var(--accent); border-color: var(--accent); color: #171717; }
+.btn-ghost:hover { background: var(--fg); color: var(--bg); }
+.btn[disabled] { opacity: 0.5; pointer-events: none; }
+
+.arrow { display: inline-block; transition: transform 0.3s; }
+.btn:hover .arrow, .group:hover .arrow { transform: translateX(5px); }
+
+/* Reveal helper: hidden only when JS motion is active */
+html.motion .rv { opacity: 0; transform: translateY(36px); }
+html.motion .rv-line { overflow: hidden; display: block; }
+
+/* Marquee */
+@keyframes marquee { to { transform: translateX(-50%); } }
+.marquee-track { animation: marquee 38s linear infinite; width: max-content; }
+@keyframes floaty { 0%,100% { transform: translateY(0) rotate(var(--r,0deg)); } 50% { transform: translateY(-14px) rotate(calc(var(--r,0deg) + 3deg)); } }
+.floaty { animation: floaty 7s ease-in-out infinite; }
+@keyframes scrollcue { 0% { transform: scaleY(0); transform-origin: top; } 50% { transform: scaleY(1); transform-origin: top; } 51% { transform-origin: bottom; } 100% { transform: scaleY(0); transform-origin: bottom; } }
+.scrollcue { animation: scrollcue 2.2s cubic-bezier(.7,0,.3,1) infinite; }
+
+/* SVG illustration draw loops */
+@keyframes dash { to { stroke-dashoffset: 0; } }
+@keyframes pulse-ring { 0% { transform: scale(.8); opacity: .7; } 100% { transform: scale(1.6); opacity: 0; } }
+.pulse-ring { transform-box: fill-box; transform-origin: center; animation: pulse-ring 2.8s ease-out infinite; }
+@keyframes orbit { to { transform: rotate(360deg); } }
+.orbit { transform-origin: 100px 100px; animation: orbit 24s linear infinite; }
+
+.photo-frame { position: relative; overflow: hidden; }
+.photo-frame img { transition: transform 1.2s cubic-bezier(.2,.8,.2,1); }
+.photo-frame:hover img { transform: scale(1.04); }
+
+@media (prefers-reduced-motion: reduce) {
+  .floaty, .marquee-track, .scrollcue, .orbit, .pulse-ring { animation: none !important; }
+  * { scroll-behavior: auto !important; }
+}
+
+/* Form fields (used on light/dark neutral surfaces in /join and /admin) */
+.field {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px solid var(--line);
+  padding: 0.85rem 0;
+  font-size: 1.1rem;
+  color: inherit;
+  transition: border-color 0.25s;
+  border-radius: 0;
+}
+.field::placeholder { color: color-mix(in srgb, currentColor 45%, transparent); }
+.field:focus { outline: none; border-color: var(--accent); }
+.field[aria-invalid="true"] { border-color: #ff8a7a; }
+select.field option { color: #171717; }
+
+html.motion [data-hero-in] { opacity: 0; }
